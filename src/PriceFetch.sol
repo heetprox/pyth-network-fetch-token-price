@@ -58,4 +58,12 @@ contract PriceFetch {
         require(uint8(token) <= 3, "Invalid token");
         _;
     }
+
+    constructor(address _pythContract) {
+        require(_pythContract != address(0), "Invalid Pyth contract address");
+        pyth = IPyth(_pythContract);
+        owner = msg.sender;
+
+        emit OwnershipTransferred(address(0), msg.sender);
+    }
 }
