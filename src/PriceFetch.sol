@@ -5,7 +5,7 @@ import {IPyth} from "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
 import {PythStructs} from "@pythnetwork/pyth-sdk-solidity/PythStructs.sol";
 
 contract PriceFetch {
-    IPyth public immutable pyth;
+    IPyth public pyth;
 
     address public owner;
 
@@ -38,7 +38,7 @@ contract PriceFetch {
         int64 price;
         uint64 confidence;
         int32 expo;
-        uint64 publishTime;
+        uint256 publishTime;
     }
 
     struct ExpenseData {
@@ -64,20 +64,10 @@ contract PriceFetch {
         pyth = IPyth(_pythContract);
         owner = msg.sender;
 
-        emit OwnershipTransferred(address(0), msg.sender);
+        // emit OwnershipTransferred(address(0), msg.sender);
     }
 
-    /**
-     * @dev Transfer ownership of the contract
-     * @param newOwner New owner address
-     */
-    function transferOwnership(address newOwner) external onlyOwner {
-        require(newOwner != address(0), "New owner cannot be zero address");
-        address oldOwner = owner;
-        owner = newOwner;
-        emit OwnershipTransferred(oldOwner, newOwner);
-    }
-
+ 
     /**
      * @dev Get price feed ID for a specific token
      * @param token Token enum value
