@@ -61,7 +61,7 @@ Token Price Fetching:
 
 1. Clone the repository
    ```bash
-   git clone https://github.com/yourusername/splitwise-oracle.git
+   git clone https://github.com/yourusername/pyth-network-fetch-token-price.git
    cd splitwise-oracle
    ```
 
