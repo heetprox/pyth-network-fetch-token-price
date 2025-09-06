@@ -77,4 +77,39 @@ contract PriceFetch {
         owner = newOwner;
         emit OwnershipTransferred(oldOwner, newOwner);
     }
+
+    /**
+     * @dev Get price feed ID for a specific token
+     * @param token Token enum value
+     * @return bytes32 Price feed ID
+     */
+    function getPriceFeedId(
+        Token token
+    ) public pure validToken(token) returns (bytes32) {
+        if (token == Token.ETH) return ETH_USD_PRICE_ID;
+        if (token == Token.USDC) return USDC_USD_PRICE_ID;
+        if (token == Token.USDT) return USDT_USD_PRICE_ID;
+        if (token == Token.PYUSD) return PYUSD_USD_PRICE_ID;
+        revert("Invalid token");
+    }
+
+    /**
+     * @dev Get latest cached price for a specific token
+     * @param token Token to get price for
+     * @return PriceData struct containing price info
+     */
+    function getLatestPrice(
+        Token token
+    ) public view validToken(token) returns (PriceData memory) {
+        bytes32 priceId = getPriceFeedId(token);
+        PythStructs.Price memory pythPrice = pyth.getPrice(priceId);
+
+        return
+            PriceData({
+                price: pythPrice.price,
+                confidence: pythPrice.conf,
+                expo: pythPrice.expo,
+                publishTime: pythPrice.publishTime
+            });
+    }
 }
