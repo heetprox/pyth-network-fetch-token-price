@@ -1,14 +1,14 @@
-# Splitwise Oracle
+# Token Price Fetching from Pyth Network
 
 A decentralized price oracle system built on Base Sepolia that fetches cryptocurrency prices from Pyth Network. This project enables fair expense splitting in multiple currencies by providing accurate price conversion between different tokens.
 
-![Splitwise Oracle](https://img.shields.io/badge/Splitwise-Oracle-blue)
+![USDT USDC PYUSD ETH](https://img.shields.io/badge/USDT-USDC-PYUSD-ETH-blue)
 ![Base Sepolia](https://img.shields.io/badge/Network-Base%20Sepolia-blue)
 ![Pyth Network](https://img.shields.io/badge/Oracle-Pyth%20Network-orange)
 
 ## Overview
 
-Splitwise Oracle is a smart contract and backend system that:
+Token Price Fetching:
 
 - Fetches real-time cryptocurrency prices from Pyth Network
 - Supports ETH, USDC, USDT, and PYUSD tokens
