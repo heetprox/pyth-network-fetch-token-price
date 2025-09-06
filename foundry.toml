@@ -5,8 +5,19 @@ libs = ["lib"]
 
 remappings = [
     "@pythnetwork/pyth-sdk-solidity/=lib/pyth-sdk-solidity/",
+    "forge-std/=lib/forge-std/src/"
 ]
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
 [rpc_endpoints]
-base = "https://mainnet.base.org"
 base_sepolia = "https://sepolia.base.org"
+base_mainnet = "https://mainnet.base.org"
+
+[etherscan]
+base_sepolia = { key = "${BASESCAN_API_KEY}", url = "https://api-sepolia.basescan.org/api" }
+
+[profile.default.fuzz]
+runs = 1000
+
+[profile.default.invariant]
+runs = 1000
+fail_on_revert = false
