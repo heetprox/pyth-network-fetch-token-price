@@ -4,23 +4,17 @@ pragma solidity ^0.8.13;
 import {IPyth} from "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
 import {PythStructs} from "@pythnetwork/pyth-sdk-solidity/PythStructs.sol";
 
-interface IENS {
-    function resolver(bytes32 node) external view returns (address);
-}
-
-interface IResolver {
-    function addr(bytes32 node) external view returns (address);
-}
-
 contract PriceFetch {
     IPyth public immutable pyth;
 
-    IENS public immutable ens;
+    address public owner;
 
     // Base Mainnet Pyth Contract: 0x8250f4aF4B972684F7b336503E2D6dFeDeB1487a
     // Base Mainnet ENS Registry: 0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e (same as ETH Mainnet)
 
-    // Price Feed IDs for Base Mainnet.
+    // Base Sepolia: 0xA2aa501b19aff244D90cc15a4Cf739D2725B5729
+
+    // Same price feed IDs work on both networks
     bytes32 public constant ETH_USD_PRICE_ID =
         0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace;
     bytes32 public constant USDC_USD_PRICE_ID =
@@ -40,7 +34,7 @@ contract PriceFetch {
         PYUSD
     }
 
-     struct PriceData {
+    struct PriceData {
         int64 price;
         uint64 confidence;
         int32 expo;
