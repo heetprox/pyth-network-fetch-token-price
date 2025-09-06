@@ -1,8 +1,9 @@
 const { ethers } = require('ethers');
 require('dotenv').config();
 
+// Configuration
 const ORACLE_ADDRESS = "0x8D2eCC24E56FDD0a6f501E4b68CE92180224d654";
-const BASE_SEPOLIA_RPC = "https://sepolia.base.org"; 
+const BASE_SEPOLIA_RPC = "https://sepolia.base.org";
 
 const TOKEN_ENUM = {
     ETH: 0,
@@ -287,6 +288,7 @@ module.exports = {
     PriceFetchOracle,
     TOKEN_ENUM,
     TOKEN_NAMES,
+    PRICE_FEED_IDS,
     ORACLE_ADDRESS
 };
 
