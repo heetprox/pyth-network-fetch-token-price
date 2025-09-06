@@ -66,4 +66,15 @@ contract PriceFetch {
 
         emit OwnershipTransferred(address(0), msg.sender);
     }
+
+    /**
+     * @dev Transfer ownership of the contract
+     * @param newOwner New owner address
+     */
+    function transferOwnership(address newOwner) external onlyOwner {
+        require(newOwner != address(0), "New owner cannot be zero address");
+        address oldOwner = owner;
+        owner = newOwner;
+        emit OwnershipTransferred(oldOwner, newOwner);
+    }
 }
