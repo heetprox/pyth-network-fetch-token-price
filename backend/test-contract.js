@@ -1,7 +1,7 @@
 const { ethers } = require('ethers');
 
 // Your contract details
-const ORACLE_ADDRESS = "0xe81D720AEa27303aEb8580E1B9c868712bcCbEF8";
+const ORACLE_ADDRESS = "0x02688C437601349b24741C24e3381763296452a7";
 const BASE_SEPOLIA_RPC = "https://sepolia.base.org";
 
 // Minimal ABI to test basic functions
