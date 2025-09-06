@@ -29,4 +29,21 @@ contract PriceFetch {
         0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b;
     bytes32 public constant PYUSD_USD_PRICE_ID =
         0x6ec879b1e9963de5ee97e9c8710b742d6228252a5e2ca12d4ae81d7fe5ee8c5d;
+
+    event PriceUpdated(string token, int64 price, uint64 timestamp);
+    event UserResolved(string ensName, address userAddress);
+
+    enum Token {
+        ETH,
+        USDC,
+        USDT,
+        PYUSD
+    }
+
+     struct PriceData {
+        int64 price;
+        uint64 confidence;
+        int32 expo;
+        uint64 publishTime;
+    }
 }
