@@ -9,20 +9,18 @@ contract PriceFetch {
 
     address public owner;
 
-    // Base Mainnet Pyth Contract: 0x8250f4aF4B972684F7b336503E2D6dFeDeB1487a
-    // Base Mainnet ENS Registry: 0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e (same as ETH Mainnet)
-
     // Base Sepolia: 0xA2aa501b19aff244D90cc15a4Cf739D2725B5729
 
-    // Same price feed IDs work on both networks
+    // *** UPDATED: BETA PRICE FEED IDs FOR TESTNET ***
+    // These are the correct Beta price feed IDs for testnet environments
     bytes32 public constant ETH_USD_PRICE_ID =
-        0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace;
+        0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace; // ETH/USD Beta
     bytes32 public constant USDC_USD_PRICE_ID =
-        0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a;
+        0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a; // USDC/USD Beta
     bytes32 public constant USDT_USD_PRICE_ID =
-        0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b;
+        0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b; // USDT/USD Beta
     bytes32 public constant PYUSD_USD_PRICE_ID =
-        0x6ec879b1e9963de5ee97e9c8710b742d6228252a5e2ca12d4ae81d7fe5ee8c5d;
+        0x6ec879b1e9963de5ee97e9c8710b742d6228252a5e2ca12d4ae81d7fe5ee8c5d; // PYUSD/USD Beta
 
     event PriceUpdated(string token, int64 price, uint256 timestamp);
     event UserResolved(string ensName, address userAddress);
@@ -63,8 +61,6 @@ contract PriceFetch {
         require(_pythContract != address(0), "Invalid Pyth contract address");
         pyth = IPyth(_pythContract);
         owner = msg.sender;
-
-        // emit OwnershipTransferred(address(0), msg.sender);
     }
 
     /**
@@ -205,13 +201,10 @@ contract PriceFetch {
         pyusdPrice = getLatestPrice(Token.PYUSD);
     }
 
+    // ... (rest of your functions remain the same)
+
     /**
      * @dev Calculate fair split amounts in USD for expense sharing
-     * @param totalAmount Total expense amount (in token's native decimals)
-     * @param totalToken Token type of the total expense
-     * @param totalDecimals Decimals of the expense token
-     * @param participants Number of people sharing the expense
-     * @return expenseData Complete expense calculation data
      */
     function calculateSplitInUSD(
         uint256 totalAmount,
@@ -246,10 +239,6 @@ contract PriceFetch {
 
     /**
      * @dev Convert USD amount to specific token amount
-     * @param usdAmount USD amount with 8 decimal places
-     * @param targetToken Token to convert USD to
-     * @param targetDecimals Target token decimals
-     * @return tokenAmount Amount in target token (in token's native decimals)
      */
     function convertUSDToToken(
         uint256 usdAmount,
@@ -267,7 +256,6 @@ contract PriceFetch {
         uint256 expo = uint256(uint32(-priceData.expo));
 
         // Calculate token amount
-        // Formula: (usdAmount * 10^(expo + targetDecimals)) / (price * 10^8)
         tokenAmount =
             (usdAmount * (10 ** (expo + targetDecimals))) /
             (price * (10 ** 8));
@@ -277,13 +265,6 @@ contract PriceFetch {
 
     /**
      * @dev Calculate how much each participant should pay in their preferred token
-     * @param expenseAmount Total expense amount
-     * @param expenseToken Token type of expense
-     * @param expenseDecimals Expense token decimals
-     * @param participants Number of participants
-     * @param paymentToken Token each person wants to pay with
-     * @param paymentDecimals Payment token decimals
-     * @return paymentAmount Amount each person pays in their chosen token
      */
     function calculatePaymentInToken(
         uint256 expenseAmount,
@@ -313,9 +294,6 @@ contract PriceFetch {
 
     /**
      * @dev Get human-readable price for a token (price as decimal)
-     * @param token Token to get readable price for
-     * @return price Human-readable price (e.g., 2000.50 for ETH)
-     * @return decimals Number of decimal places in the price
      */
     function getReadablePrice(
         Token token
@@ -332,8 +310,6 @@ contract PriceFetch {
 
     /**
      * @dev Get token name as string
-     * @param token Token enum
-     * @return Token name
      */
     function getTokenName(
         Token token
@@ -347,8 +323,6 @@ contract PriceFetch {
 
     /**
      * @dev Get standard decimals for supported tokens
-     * @param token Token enum
-     * @return Number of decimals
      */
     function getTokenDecimals(
         Token token
@@ -362,9 +336,6 @@ contract PriceFetch {
 
     /**
      * @dev Check if a price is stale (older than specified seconds)
-     * @param token Token to check
-     * @param maxAgeSeconds Maximum age in seconds
-     * @return isStale True if price is stale
      */
     function isPriceStale(
         Token token,
@@ -376,8 +347,6 @@ contract PriceFetch {
 
     /**
      * @dev Get required update fee for price feeds
-     * @param priceUpdateData Price update data from Hermes
-     * @return fee Required fee in wei
      */
     function getUpdateFee(
         bytes[] calldata priceUpdateData
@@ -387,7 +356,6 @@ contract PriceFetch {
 
     /**
      * @dev Batch update multiple price feeds
-     * @param priceUpdateData Array of price update data
      */
     function updatePriceFeeds(
         bytes[] calldata priceUpdateData
@@ -415,9 +383,6 @@ contract PriceFetch {
 
     /**
      * @dev Get contract info
-     * @return pythAddress Pyth contract address
-     * @return contractOwner Contract owner address
-     * @return contractBalance Contract ETH balance
      */
     function getContractInfo()
         external

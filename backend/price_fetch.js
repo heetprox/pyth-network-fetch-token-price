@@ -3,7 +3,7 @@ const axios = require('axios');
 require('dotenv').config();
 
 // Configuration
-const ORACLE_ADDRESS = "0x8D2eCC24E56FDD0a6f501E4b68CE92180224d654";
+const ORACLE_ADDRESS = "0x02688C437601349b24741C24e3381763296452a7"; 
 const BASE_SEPOLIA_RPC = "https://sepolia.base.org";
 const PYTH_HERMES_URL = "https://hermes.pyth.network";
 
@@ -17,7 +17,7 @@ const TOKEN_ENUM = {
 
 const TOKEN_NAMES = ['ETH', 'USDC', 'USDT', 'PYUSD'];
 
-// Price feed IDs from your contract
+// Beta price feed IDs for testnet
 const PRICE_FEED_IDS = {
     ETH: '0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace',
     USDC: '0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a',
@@ -41,6 +41,7 @@ class PriceFetchOracle {
         this.provider = null;
         this.contract = null;
         this.wallet = null;
+        this.currentNonce = null;
     }
 
     async initialize() {
@@ -62,6 +63,10 @@ class PriceFetchOracle {
                 this.wallet = new ethers.Wallet(process.env.PRIVATE_KEY, this.provider);
                 console.log(`🔑 Wallet loaded: ${this.wallet.address}`);
                 
+                // Get current nonce
+                this.currentNonce = await this.provider.getTransactionCount(this.wallet.address);
+                console.log(`🔢 Current nonce: ${this.currentNonce}`);
+                
                 // Check wallet balance
                 const balance = await this.provider.getBalance(this.wallet.address);
                 console.log(`💰 Wallet balance: ${ethers.formatEther(balance)} ETH`);
@@ -77,90 +82,153 @@ class PriceFetchOracle {
         }
     }
 
-    // Helper function to format prices
+    // Fixed helper function to format prices
     formatPrice(priceData) {
-        const { price, confidence, expo, publishTime } = priceData;
-        
-        // Convert BigInt to regular numbers for calculations
-        const priceNum = Number(price);
-        const expoNum = Number(expo);
-        const confidenceNum = Number(confidence);
-        
-        // Calculate actual price (price * 10^expo)
-        const actualPrice = priceNum * Math.pow(10, expoNum);
-        
-        // Format publish time
-        const publishDate = new Date(Number(publishTime) * 1000);
-        
-        return {
-            rawPrice: priceNum,
-            actualPrice: actualPrice,
-            confidence: confidenceNum,
-            expo: expoNum,
-            publishTime: Number(publishTime),
-            publishDate: publishDate.toISOString(),
-            formatted: `$${actualPrice.toFixed(6)}`,
-            isValid: actualPrice > 0
-        };
+        try {
+            const { price, confidence, expo, publishTime } = priceData;
+            
+            // Convert BigInt to regular numbers for calculations
+            const priceNum = Number(price);
+            const expoNum = Number(expo);
+            const confidenceNum = Number(confidence);
+            const publishTimeNum = Number(publishTime);
+            
+            // Validate publishTime before creating Date
+            let publishDate = 'N/A';
+            let timeAgo = 'N/A';
+            
+            if (publishTimeNum && publishTimeNum > 0) {
+                try {
+                    // Check if it's a reasonable timestamp (not too far in future/past)
+                    const now = Math.floor(Date.now() / 1000);
+                    if (publishTimeNum > 1000000000 && publishTimeNum < now + 86400) { // Valid range
+                        publishDate = new Date(publishTimeNum * 1000).toISOString();
+                        const ageMinutes = Math.floor((now - publishTimeNum) / 60);
+                        timeAgo = ageMinutes < 1440 ? `${ageMinutes}m ago` : `${Math.floor(ageMinutes/1440)}d ago`;
+                    }
+                } catch (dateError) {
+                    console.warn('Date formatting error:', dateError.message);
+                }
+            }
+            
+            // Calculate actual price (price * 10^expo)
+            const actualPrice = priceNum * Math.pow(10, expoNum);
+            
+            return {
+                rawPrice: priceNum,
+                actualPrice: actualPrice,
+                confidence: confidenceNum,
+                expo: expoNum,
+                publishTime: publishTimeNum,
+                publishDate: publishDate,
+                timeAgo: timeAgo,
+                formatted: actualPrice > 0 ? `$${actualPrice.toFixed(6)}` : '$0.000000',
+                isValid: actualPrice > 0 && priceNum !== 0
+            };
+        } catch (error) {
+            console.error('Price formatting error:', error.message);
+            return {
+                rawPrice: 'N/A',
+                actualPrice: 0,
+                confidence: 'N/A',
+                expo: 'N/A',
+                publishTime: 'N/A',
+                publishDate: 'N/A',
+                timeAgo: 'N/A',
+                formatted: 'Price not available',
+                isValid: false,
+                error: error.message
+            };
+        }
     }
 
     // Fetch price update data from Pyth Hermes API
     async fetchPriceUpdateData() {
         try {
             const priceIds = Object.values(PRICE_FEED_IDS);
-            const idsParam = priceIds.map(id => `ids[]=${id}`).join('&');
+            console.log('🌐 Fetching Beta price updates from Pyth Hermes...');
             
-            console.log('🌐 Fetching price updates from Pyth Hermes...');
-            const response = await axios.get(
-                `${PYTH_HERMES_URL}/v2/updates/price/latest?${idsParam}&encoding=hex`,
-                { timeout: 10000 }
-            );
+            const idsParam = priceIds.map(id => `ids[]=${id}`).join('&');
+            const url = `${PYTH_HERMES_URL}/v2/updates/price/latest?${idsParam}&encoding=hex`;
+            
+            const response = await axios.get(url, { 
+                timeout: 15000,
+                headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'PriceFetch-Oracle/1.0'
+                }
+            });
             
             if (response.data && response.data.binary && response.data.binary.data) {
                 const updateData = response.data.binary.data.map(update => '0x' + update);
-                console.log(`✅ Got ${updateData.length} price updates from Hermes`);
+                console.log(`✅ Got ${updateData.length} Beta price updates from Hermes`);
                 return updateData;
             }
             
             throw new Error('No price update data received from Hermes');
         } catch (error) {
-            console.error('❌ Failed to fetch price updates:', error.message);
+            console.error('❌ Failed to fetch Beta price updates:', error.message);
             throw error;
         }
     }
 
-    // Get individual token price with optional update
-    async getTokenPrice(tokenName, withUpdate = false) {
+    // Update all prices in a single transaction (more efficient)
+    async updateAllPrices() {
+        if (!this.wallet) {
+            throw new Error('Wallet required for price updates');
+        }
+
+        try {
+            console.log('📊 Updating all prices in batch...');
+            
+            // Get price update data
+            const priceUpdateData = await this.fetchPriceUpdateData();
+            const contractWithWallet = new ethers.Contract(ORACLE_ADDRESS, ORACLE_ABI, this.wallet);
+            
+            // Get update fee
+            const updateFee = await this.contract.getUpdateFee(priceUpdateData);
+            console.log(`💰 Total update fee: ${ethers.formatEther(updateFee)} ETH`);
+            
+            // Update all price feeds in one transaction
+            const tx = await contractWithWallet.updatePriceFeeds(priceUpdateData, {
+                value: updateFee,
+                gasLimit: 1000000,
+                nonce: this.currentNonce++
+            });
+            
+            console.log(`🚀 Transaction sent: ${tx.hash}`);
+            
+            // Wait for confirmation
+            const receipt = await tx.wait();
+            console.log(`✅ All prices updated successfully! Block: ${receipt.blockNumber}`);
+            
+            return true;
+        } catch (error) {
+            console.error('❌ Failed to update prices:', error.message);
+            
+            // Reset nonce if needed
+            if (error.code === 'NONCE_EXPIRED' || error.message.includes('nonce')) {
+                console.log('🔄 Resetting nonce...');
+                this.currentNonce = await this.provider.getTransactionCount(this.wallet.address);
+            }
+            
+            throw error;
+        }
+    }
+
+    // Get individual token price (cached only)
+    async getTokenPrice(tokenName) {
         try {
             const tokenEnum = TOKEN_ENUM[tokenName.toUpperCase()];
             if (tokenEnum === undefined) {
                 throw new Error(`Unsupported token: ${tokenName}`);
             }
 
-            console.log(`📈 Fetching ${tokenName} price${withUpdate ? ' (with update)' : ''}...`);
+            console.log(`📈 Fetching ${tokenName} price (cached)...`);
             
-            if (withUpdate && this.wallet) {
-                // Get fresh price with update
-                const priceUpdateData = await this.fetchPriceUpdateData();
-                const contractWithWallet = new ethers.Contract(ORACLE_ADDRESS, ORACLE_ABI, this.wallet);
-                
-                // Get update fee
-                const updateFee = await this.contract.getUpdateFee(priceUpdateData);
-                console.log(`💰 Update fee: ${ethers.formatEther(updateFee)} ETH`);
-                
-                // Get fresh price with update
-                const priceData = await contractWithWallet.getLatestPriceWithUpdate(
-                    tokenEnum, 
-                    priceUpdateData,
-                    { value: updateFee, gasLimit: 500000 }
-                );
-                
-                return this.formatPrice(priceData);
-            } else {
-                // Get cached price
-                const priceData = await this.contract.getLatestPrice(tokenEnum);
-                return this.formatPrice(priceData);
-            }
+            // Get cached price
+            const priceData = await this.contract.getLatestPrice(tokenEnum);
+            return this.formatPrice(priceData);
             
         } catch (error) {
             console.error(`❌ Failed to fetch ${tokenName} price:`, error.message);
@@ -171,6 +239,7 @@ class PriceFetchOracle {
                 expo: 'N/A',
                 publishTime: 'N/A',
                 publishDate: 'N/A',
+                timeAgo: 'N/A',
                 formatted: 'Price not available',
                 isValid: false,
                 error: error.message
@@ -178,16 +247,14 @@ class PriceFetchOracle {
         }
     }
 
-    // Get all token prices
-    async getAllTokenPrices(withUpdate = false) {
-        console.log(`\n📊 Fetching all token prices${withUpdate ? ' (with updates)' : ''}...`);
+    // Get all token prices (cached)
+    async getAllTokenPrices() {
+        console.log('\n📊 Fetching all cached token prices...');
         
         const prices = {};
         
         for (const tokenName of TOKEN_NAMES) {
-            prices[tokenName] = await this.getTokenPrice(tokenName, withUpdate);
-            
-            // Add small delay between requests to avoid rate limiting
+            prices[tokenName] = await this.getTokenPrice(tokenName);
             await new Promise(resolve => setTimeout(resolve, 100));
         }
         
@@ -197,21 +264,20 @@ class PriceFetchOracle {
     // Display all prices in a formatted table
     displayPrices(prices) {
         console.log('\n' + '='.repeat(85));
-        console.log('📊 TOKEN PRICES');
+        console.log('📊 TOKEN PRICES (BETA FEEDS)');
         console.log('='.repeat(85));
         console.log('Token    | Price (USD)       | Confidence       | Last Updated');
         console.log('-'.repeat(85));
         
         Object.entries(prices).forEach(([token, data]) => {
             if (!data.isValid) {
-                console.log(`${token.padEnd(8)} | ${data.formatted.padEnd(17)} | ${'N/A'.padEnd(16)} | N/A`);
+                console.log(`${token.padEnd(8)} | ${'Price not available'.padEnd(17)} | ${'N/A'.padEnd(16)} | N/A`);
             } else {
                 const confidence = data.confidence * Math.pow(10, data.expo);
-                const timeAgo = Math.floor((Date.now() - data.publishTime * 1000) / 1000 / 60);
-                const timeDisplay = timeAgo < 1440 ? `${timeAgo}m ago` : `${Math.floor(timeAgo/1440)}d ago`;
+                const confidenceDisplay = confidence > 0 ? `±${confidence.toFixed(6)}` : 'N/A';
                 
                 console.log(
-                    `${token.padEnd(8)} | ${data.formatted.padEnd(17)} | ±${confidence.toFixed(6).padEnd(15)} | ${timeDisplay}`
+                    `${token.padEnd(8)} | ${data.formatted.padEnd(17)} | ${confidenceDisplay.padEnd(16)} | ${data.timeAgo}`
                 );
             }
         });
@@ -224,16 +290,17 @@ class PriceFetchOracle {
         
         console.log(`\n📈 Status: ${validPrices}/${totalPrices} prices available`);
         
-        if (validPrices < totalPrices) {
-            const unavailableTokens = Object.entries(prices)
-                .filter(([, data]) => !data.isValid)
-                .map(([token]) => token);
-                
-            console.log('❌ Unavailable:', unavailableTokens.join(', '));
-            console.log('\n💡 To get live prices:');
-            console.log('1. Add PRIVATE_KEY to .env file');
-            console.log('2. Ensure you have Base Sepolia ETH for gas');
-            console.log('3. Run with fresh updates enabled');
+        if (validPrices > 0) {
+            console.log('\n🎉 SUCCESS! Price data is now available:');
+            Object.entries(prices)
+                .filter(([, data]) => data.isValid)
+                .forEach(([token, data]) => {
+                    console.log(`  ${token}: ${data.formatted} (updated ${data.timeAgo})`);
+                });
+        } else {
+            console.log('\n💡 Next steps:');
+            console.log('1. Update prices first: await oracle.updateAllPrices()');
+            console.log('2. Then fetch cached prices: await oracle.getAllTokenPrices()');
         }
     }
 
@@ -257,8 +324,8 @@ class PriceFetchOracle {
 
 // Main execution function
 async function main() {
-    console.log('🚀 PriceFetch Oracle Backend');
-    console.log('============================');
+    console.log('🚀 PriceFetch Oracle Backend (FIXED VERSION)');
+    console.log('==============================================');
     
     const oracle = new PriceFetchOracle();
     
@@ -276,49 +343,41 @@ async function main() {
             console.log('Balance:         ', contractInfo.balance);
         }
         
-        // Try to get cached prices first
-        console.log('\n🔄 Step 1: Trying cached prices...');
-        let prices = await oracle.getAllTokenPrices(false);
-        
-        // Check if we got any valid prices
-        const validPrices = Object.values(prices).filter(p => p.isValid).length;
-        
-        if (validPrices === 0 && oracle.wallet) {
-            console.log('\n🔄 Step 2: No cached prices found. Updating with fresh data...');
-            prices = await oracle.getAllTokenPrices(true);
+        // Strategy: Update all prices first, then fetch cached prices
+        if (oracle.wallet) {
+            console.log('\n🔄 Step 1: Updating all prices...');
+            try {
+                await oracle.updateAllPrices();
+                
+                // Wait a bit for prices to settle
+                console.log('⏳ Waiting for prices to settle...');
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                
+                console.log('\n🔄 Step 2: Fetching updated prices...');
+                const prices = await oracle.getAllTokenPrices();
+                oracle.displayPrices(prices);
+                
+            } catch (updateError) {
+                console.error('❌ Price update failed:', updateError.message);
+                console.log('\n🔄 Fallback: Trying cached prices...');
+                const prices = await oracle.getAllTokenPrices();
+                oracle.displayPrices(prices);
+            }
+        } else {
+            // No wallet - try cached prices only
+            console.log('\n🔄 Fetching cached prices (read-only mode)...');
+            const prices = await oracle.getAllTokenPrices();
+            oracle.displayPrices(prices);
         }
         
-        // Display results
-        oracle.displayPrices(prices);
-        
-        // Show individual readable prices for valid ones
-        const validTokens = Object.entries(prices)
-            .filter(([, data]) => data.isValid)
-            .map(([token]) => token);
-            
-        if (validTokens.length > 0) {
-            console.log('\n🔍 Readable Prices:');
-            validTokens.forEach(token => {
-                const data = prices[token];
-                console.log(`${token}: ${data.formatted} (${data.confidence} confidence)`);
-            });
-        }
-        
-        console.log('\n✅ Price fetch completed!');
-        
-        if (validPrices === 0) {
-            console.log('\n🔧 No prices available. This is normal for testnets.');
-            console.log('The Pyth oracle requires price updates which cost gas.');
-        }
+        console.log('\n✅ Process completed!');
         
     } catch (error) {
         console.error('\n❌ Error:', error.message);
-        
-        console.log('\n🔧 Troubleshooting:');
-        console.log('- Verify internet connection');
-        console.log('- Check contract address is correct');
-        console.log('- Ensure Base Sepolia RPC is accessible');
-        console.log('- For price updates: add PRIVATE_KEY to .env and have ETH');
+        console.log('\n🔧 Troubleshooting checklist:');
+        console.log('- Contract address is correct');
+        console.log('- Network connectivity is good');
+        console.log('- For updates: PRIVATE_KEY in .env and sufficient ETH balance');
         
         process.exit(1);
     }
