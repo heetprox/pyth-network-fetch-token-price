@@ -40,4 +40,12 @@ contract PriceFetch {
         int32 expo;
         uint64 publishTime;
     }
+
+    struct ExpenseData {
+        uint256 totalAmount; // Total expense amount
+        Token token; // Token type of expense
+        uint8 decimals; // Token decimals
+        uint256 participants; // Number of participants
+        uint256 usdPerPerson; // USD amount each person owes
+    }
 }
