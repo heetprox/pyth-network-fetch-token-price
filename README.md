@@ -2,8 +2,8 @@
 
 A decentralized price oracle system built on Base Sepolia that fetches cryptocurrency prices from Pyth Network. This project enables fair expense splitting in multiple currencies by providing accurate price conversion between different tokens.
 
-![PYUSD ETH](https://img.shields.io/badge/Network-Base%20Sepolia-blue)
-![USDT USDC](https://img.shields.io/badge/Oracle-Pyth%20Network-orange)
+![PYUSD ETH](https://img.shields.io/badge/PYUSD-ETH-blue)
+![USDT USDC](https://img.shields.io/badge/USDT-USDC-orange)
 ![Base Sepolia](https://img.shields.io/badge/Network-Base%20Sepolia-blue)
 ![Pyth Network](https://img.shields.io/badge/Oracle-Pyth%20Network-orange)
 
