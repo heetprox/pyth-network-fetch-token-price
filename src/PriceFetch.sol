@@ -48,4 +48,14 @@ contract PriceFetch {
         uint256 participants; // Number of participants
         uint256 usdPerPerson; // USD amount each person owes
     }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner can call this");
+        _;
+    }
+
+    modifier validToken(Token token) {
+        require(uint8(token) <= 3, "Invalid token");
+        _;
+    }
 }
